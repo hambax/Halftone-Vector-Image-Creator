@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Halftone Vector Creator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --surface: #1a1a1a;
+      --surface-variant: #2d2d2d;
+      --surface-container: #242424;
+      --on-surface: #e6e6e6;
+      --on-surface-variant: #a0a0a0;
+      --primary: #a0c4ff;
+      --primary-container: #004a77;
+      --outline: #444;
+      --outline-variant: #333;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--surface);
+      color: var(--on-surface);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .app {
+      display: flex;
+      height: 100vh;
+    }
+
+    .canvas-area {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #111;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .canvas-container {
+      position: relative;
+      background: repeating-conic-gradient(#333 0% 25%, #222 0% 50%) 50% / 20px 20px;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    #mainCanvas {
+      display: block;
+    }
+
+    #svgOutput {
+      position: absolute;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+    }
+
+    .sidebar {
+      width: 360px;
+      background: var(--surface-container);
+      border-left: 1px solid var(--outline-variant);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--outline-variant);
+    }
+
+    .sidebar-header h1 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .sidebar-header p {
+      font-size: 12px;
+      color: var(--on-surface-variant);
+    }
+
+    .sidebar-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+
+    .section {
+      margin-bottom: 24px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--on-surface-variant);
+      margin-bottom: 12px;
+    }
+
+    .upload-zone {
+      border: 2px dashed var(--outline);
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .upload-zone:hover {
+      border-color: var(--primary);
+      background: rgba(160, 196, 255, 0.05);
+    }
+
+    .upload-zone svg {
+      width: 32px;
+      height: 32px;
+      margin-bottom: 8px;
+      stroke: var(--on-surface-variant);
+    }
+
+    .upload-zone p {
+      font-size: 13px;
+      color: var(--on-surface-variant);
+    }
+
+    #imageInput {
+      display: none;
+    }
+
+    .control-group {
+      margin-bottom: 16px;
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .control-label span {
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .control-label .value {
+      font-size: 12px;
+      color: var(--primary);
+      margin-left: auto;
+      font-weight: 400;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 4px;
+      -webkit-appearance: none;
+      background: var(--outline);
+      border-radius: 2px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      background: var(--primary);
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .color-input-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    input[type="color"] {
+      width: 40px;
+      height: 40px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: none;
+    }
+
+    input[type="color"]::-webkit-color-swatch-wrapper {
+      padding: 0;
+    }
+
+    input[type="color"]::-webkit-color-swatch {
+      border-radius: 8px;
+      border: 2px solid var(--outline);
+    }
+
+    .color-hex {
+      font-size: 13px;
+      font-family: monospace;
+      color: var(--on-surface-variant);
+    }
+
+    select {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--surface-variant);
+      border: 1px solid var(--outline);
+      border-radius: 8px;
+      color: var(--on-surface);
+      font-size: 13px;
+      cursor: pointer;
+      outline: none;
+    }
+
+    select:focus {
+      border-color: var(--primary);
+    }
+
+    .btn {
+      padding: 10px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #000;
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.1);
+    }
+
+    .btn-secondary {
+      background: var(--surface-variant);
+      color: var(--on-surface);
+      border: 1px solid var(--outline);
+    }
+
+    .btn-secondary:hover {
+      background: var(--outline);
+    }
+
+    .btn-icon {
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .layers-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .layer-item {
+      background: var(--surface-variant);
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .layer-item:hover {
+      background: var(--outline);
+    }
+
+    .layer-item.active {
+      border-color: var(--primary);
+    }
+
+    .layer-preview {
+      width: 40px;
+      height: 40px;
+      border-radius: 6px;
+      background: var(--outline);
+      overflow: hidden;
+    }
+
+    .layer-preview canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .layer-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .layer-name {
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .layer-type {
+      font-size: 11px;
+      color: var(--on-surface-variant);
+    }
+
+    .layer-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .layer-actions button {
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      color: var(--on-surface-variant);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .layer-actions button:hover {
+      background: var(--outline);
+      color: var(--on-surface);
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+    }
+
+    .toggle-row span {
+      font-size: 13px;
+    }
+
+    .toggle {
+      width: 44px;
+      height: 24px;
+      background: var(--outline);
+      border-radius: 12px;
+      position: relative;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .toggle.active {
+      background: var(--primary);
+    }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 50%;
+      transition: all 0.2s;
+    }
+
+    .toggle.active::after {
+      left: 22px;
+    }
+
+    .sidebar-footer {
+      padding: 16px;
+      border-top: 1px solid var(--outline-variant);
+      display: flex;
+      gap: 8px;
+    }
+
+    .sidebar-footer .btn {
+      flex: 1;
+      justify-content: center;
+    }
+
+    .chip-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      padding: 6px 12px;
+      background: var(--surface-variant);
+      border: 1px solid var(--outline);
+      border-radius: 16px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .chip:hover {
+      background: var(--outline);
+    }
+
+    .chip.active {
+      background: var(--primary-container);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 24px;
+      color: var(--on-surface-variant);
+    }
+
+    .empty-state svg {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 12px;
+      opacity: 0.5;
+    }
+
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--outline-variant);
+      margin-bottom: 16px;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 12px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--on-surface-variant);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .tab:hover {
+      color: var(--on-surface);
+    }
+
+    .tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .presets-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .preset {
+      aspect-ratio: 1;
+      background: var(--surface-variant);
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+      overflow: hidden;
+    }
+
+    .preset:hover {
+      border-color: var(--outline);
+    }
+
+    .preset.active {
+      border-color: var(--primary);
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="canvas-area">
+      <div class="canvas-container">
+        <canvas id="mainCanvas" width="600" height="600"></canvas>
+        <svg id="svgOutput" width="600" height="600"></svg>
+      </div>
+    </div>
+    
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h1>Halftone Creator</h1>
+        <p>Create stunning vector halftone effects</p>
+      </div>
+      
+      <div class="sidebar-content">
+        <div class="section">
+          <div class="section-title">Image Source</div>
+          <div class="upload-zone" id="uploadZone">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17,8 12,3 7,8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <p>Click or drop image here</p>
+          </div>
+          <input type="file" id="imageInput" accept="image/*">
+        </div>
+
+        <div class="section">
+          <div class="section-title">Layers</div>
+          <div class="btn-group" style="margin-bottom: 12px;">
+            <button class="btn btn-secondary" onclick="addLayer('halftone')">+ Halftone</button>
+            <button class="btn btn-secondary" onclick="addLayer('solid')">+ Solid</button>
+          </div>
+          <div class="layers-list" id="layersList">
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <line x1="3" y1="9" x2="21" y2="9"/>
+                <line x1="9" y1="21" x2="9" y2="9"/>
+              </svg>
+              <p>No layers yet<br><small>Add a layer to get started</small></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="section" id="layerSettings" style="display: none;">
+          <div class="tabs">
+            <div class="tab active" data-tab="halftone">Halftone</div>
+            <div class="tab" data-tab="transform">Transform</div>
+            <div class="tab" data-tab="style">Style</div>
+          </div>
+
+          <div class="tab-content active" id="tab-halftone">
+            <div class="control-group">
+              <div class="control-label">
+                <span>Dot Size</span>
+                <span class="value" id="dotSizeValue">8</span>
+              </div>
+              <input type="range" id="dotSize" min="2" max="30" value="8">
+            </div>
+
+            <div class="control-group">
+              <div class="control-label">
+                <span>Spacing</span>
+                <span class="value" id="spacingValue">10</span>
+              </div>
+              <input type="range" id="spacing" min="4" max="40" value="10">
+            </div>
+
+            <div class="control-group">
+              <div class="control-label">
+                <span>Angle</span>
+                <span class="value" id="angleValue">45°</span>
+              </div>
+              <input type="range" id="angle" min="0" max="180" value="45">
+            </div>
+
+            <div class="control-group">
+              <div class="control-label">
+                <span>Contrast</span>
+                <span class="value" id="contrastValue">1.0</span>
+              </div>
+              <input type="range" id="contrast" min="0.5" max="3" step="0.1" value="1">
+            </div>
+
+            <div class="control-group">
+              <div class="control-label">
+                <span>Min Dot Size</span>
+                <span class="value" id="minDotValue">0.5</span>
+              </div>
+              <input type="range" id="minDot" min="0" max="1" step="0.1" value="0.5">
+            </div>
+
+            <div class="control-group">
+              <div class="control-label"><span>Shape</span></div>
+              <div class="chip-group">
+                <div class="chip active" data-shape="circle">Circle</div>
+                <div class="chip" data-shape="square">Square</div>
+                <div class="chip" data-shape="diamond">Diamond</div>
+                <div class="chip" data-shape="line">Line</div>
+                <div class="chip" data-shape="cross">Cross</div>
+              </div>
+            </div>
+
+            <div class="toggle-row">
+              <span>Invert</span>
+              <div class="toggle" id="invertToggle"></div>
+            </div>
+          </div>
+
+          <div class="tab-content" id="tab-transform">
+            <div class="control-group">
+              <div class="control-label">
+                <span>X Offset</span>
+                <span class="value" id="offsetXValue">0</span>
+              </div>
+              <input type="range" id="offsetX" min="-50" max="50" value="0">
+            </div>
+
+            <div class="control-group">
+              <div class="control-label">
+                <span>Y Offset</span>
+                <span class="value" id="offsetYValue">0</span>
+              </div>
+              <input type="range" id="offsetY" min="-50" max="50" value="0">
+            </div>
+
+            <div class="control-group">
+              <div class="control-label">
+                <span>Scale</span>
+                <span class="value" id="scaleValue">100%</span>
+              </div>
+              <input type="range" id="scale" min="50" max="200" value="100">
+            </div>
+
+            <div class="control-group">
+              <div class="control-label">
+                <span>Rotation</span>
+                <span class="value" id="rotationValue">0°</span>
+              </div>
+              <input type="range" id="rotation" min="0" max="360" value="0">
+            </div>
+          </div>
+
+          <div class="tab-content" id="tab-style">
+            <div class="control-group">
+              <div class="control-label"><span>Dot Color</span></div>
+              <div class="color-input-wrapper">
+                <input type="color" id="dotColor" value="#000000">
+                <span class="color-hex" id="dotColorHex">#000000</span>
+              </div>
+            </div>
+
+            <div class="control-group">
+              <div class="control-label"><span>Background</span></div>
+              <div class="color-input-wrapper">
+                <input type="color" id="bgColor" value="#ffffff">
+                <span class="color-hex" id="bgColorHex">#ffffff</span>
+              </div>
+            </div>
+
+            <div class="control-group">
+              <div class="control-label">
+                <span>Opacity</span>
+                <span class="value" id="opacityValue">100%</span>
+              </div>
+              <input type="range" id="opacity" min="0" max="100" value="100">
+            </div>
+
+            <div class="control-group">
+              <div class="control-label"><span>Blend Mode</span></div>
+              <select id="blendMode">
+                <option value="normal">Normal</option>
+                <option value="multiply">Multiply</option>
+                <option value="screen">Screen</option>
+                <option value="overlay">Overlay</option>
+                <option value="darken">Darken</option>
+                <option value="lighten">Lighten</option>
+                <option value="difference">Difference</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Presets</div>
+          <div class="presets-grid">
+            <div class="preset" onclick="applyPreset('classic')" title="Classic">
+              <svg width="40" height="40" viewBox="0 0 40 40">
+                <circle cx="10" cy="10" r="4" fill="#333"/>
+                <circle cx="25" cy="10" r="3" fill="#333"/>
+                <circle cx="10" cy="25" r="3" fill="#333"/>
+                <circle cx="25" cy="25" r="5" fill="#333"/>
+              </svg>
+            </div>
+            <div class="preset" onclick="applyPreset('pop')" title="Pop Art">
+              <svg width="40" height="40" viewBox="0 0 40 40">
+                <circle cx="10" cy="10" r="4" fill="#ff0066"/>
+                <circle cx="25" cy="10" r="3" fill="#ff0066"/>
+                <circle cx="10" cy="25" r="3" fill="#ff0066"/>
+                <circle cx="25" cy="25" r="5" fill="#ff0066"/>
+              </svg>
+            </div>
+            <div class="preset" onclick="applyPreset('cmyk-c')" title="Cyan">
+              <svg width="40" height="40" viewBox="0 0 40 40">
+                <circle cx="10" cy="10" r="4" fill="#00ffff"/>
+                <circle cx="25" cy="10" r="3" fill="#00ffff"/>
+                <circle cx="10" cy="25" r="3" fill="#00ffff"/>
+                <circle cx="25" cy="25" r="5" fill="#00ffff"/>
+              </svg>
+            </div>
+            <div class="preset" onclick="applyPreset('dense')" title="Dense">
+              <svg width="40" height="40" viewBox="0 0 40 40">
+                <circle cx="8" cy="8" r="2" fill="#333"/><circle cx="16" cy="8" r="2" fill="#333"/>
+                <circle cx="24" cy="8" r="2" fill="#333"/><circle cx="32" cy="8" r="2" fill="#333"/>
+                <circle cx="8" cy="16" r="2" fill="#333"/><circle cx="16" cy="16" r="2" fill="#333"/>
+                <circle cx="24" cy="16" r="2" fill="#333"/><circle cx="32" cy="16" r="2" fill="#333"/>
+                <circle cx="8" cy="24" r="2" fill="#333"/><circle cx="16" cy="24" r="2" fill="#333"/>
+                <circle cx="24" cy="24" r="2" fill="#333"/><circle cx="32" cy="24" r="2" fill="#333"/>
+              </svg>
+            </div>
+            <div class="preset" onclick="applyPreset('squares')" title="Squares">
+              <svg width="40" height="40" viewBox="0 0 40 40">
+                <rect x="6" y="6" width="8" height="8" fill="#333"/>
+                <rect x="22" y="6" width="6" height="6" fill="#333"/>
+                <rect x="6" y="22" width="6" height="6" fill="#333"/>
+                <rect x="22" y="22" width="10" height="10" fill="#333"/>
+              </svg>
+            </div>
+            <div class="preset" onclick="applyPreset('lines')" title="Lines">
+              <svg width="40" height="40" viewBox="0 0 40 40">
+                <line x1="5" y1="8" x2="35" y2="8" stroke="#333" stroke-width="4"/>
+                <line x1="5" y1="20" x2="35" y2="20" stroke="#333" stroke-width="2"/>
+                <line x1="5" y1="32" x2="35" y2="32" stroke="#333" stroke-width="6"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <button class="btn btn-secondary" onclick="exportSVG()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7,10 12,15 17,10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Export SVG
+        </button>
+        <button class="btn btn-primary" onclick="exportPNG()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21,15 16,10 5,21"/>
+          </svg>
+          Export PNG
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let layers = [];
+    let activeLayerIndex = -1;
+    let sourceImage = null;
+    let imageData = null;
+    
+    const canvas = document.getElementById('mainCanvas');
+    const ctx = canvas.getContext('2d');
+    const svgOutput = document.getElementById('svgOutput');
+
+    // Initialize
+    function init() {
+      setupEventListeners();
+      render();
+    }
+
+    function setupEventListeners() {
+      // File upload
+      const uploadZone = document.getElementById('uploadZone');
+      const imageInput = document.getElementById('imageInput');
+
+      uploadZone.addEventListener('click', () => imageInput.click());
+      uploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadZone.style.borderColor = 'var(--primary)';
+      });
+      uploadZone.addEventListener('dragleave', () => {
+        uploadZone.style.borderColor = 'var(--outline)';
+      });
+      uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadZone.style.borderColor = 'var(--outline)';
+        if (e.dataTransfer.files[0]) handleImageUpload(e.dataTransfer.files[0]);
+      });
+      imageInput.addEventListener('change', (e) => {
+        if (e.target.files[0]) handleImageUpload(e.target.files[0]);
+      });
+
+      // Sliders
+      const sliders = ['dotSize', 'spacing', 'angle', 'contrast', 'minDot', 'offsetX', 'offsetY', 'scale', 'rotation', 'opacity'];
+      sliders.forEach(id => {
+        const el = document.getElementById(id);
+        el.addEventListener('input', () => {
+          updateSliderValue(id);
+          updateActiveLayer();
+          render();
+        });
+      });
+
+      // Colors
+      document.getElementById('dotColor').addEventListener('input', (e) => {
+        document.getElementById('dotColorHex').textContent = e.target.value;
+        updateActiveLayer();
+        render();
+      });
+      document.getElementById('bgColor').addEventListener('input', (e) => {
+        document.getElementById('bgColorHex').textContent = e.target.value;
+        updateActiveLayer();
+        render();
+      });
+
+      // Blend mode
+      document.getElementById('blendMode').addEventListener('change', () => {
+        updateActiveLayer();
+        render();
+      });
+
+      // Shapes
+      document.querySelectorAll('[data-shape]').forEach(chip => {
+        chip.addEventListener('click', () => {
+          document.querySelectorAll('[data-shape]').forEach(c => c.classList.remove('active'));
+          chip.classList.add('active');
+          updateActiveLayer();
+          render();
+        });
+      });
+
+      // Invert toggle
+      document.getElementById('invertToggle').addEventListener('click', function() {
+        this.classList.toggle('active');
+        updateActiveLayer();
+        render();
+      });
+
+      // Tabs
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+          tab.classList.add('active');
+          document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+        });
+      });
+    }
+
+    function updateSliderValue(id) {
+      const el = document.getElementById(id);
+      const valueEl = document.getElementById(id + 'Value');
+      if (!valueEl) return;
+      
+      let value = el.value;
+      if (id === 'angle' || id === 'rotation') value += '°';
+      else if (id === 'scale' || id === 'opacity') value += '%';
+      valueEl.textContent = value;
+    }
+
+    function handleImageUpload(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          sourceImage = img;
+          
+          // Create temp canvas to get image data
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.width = canvas.width;
+          tempCanvas.height = canvas.height;
+          const tempCtx = tempCanvas.getContext('2d');
+          
+          // Scale image to fit
+          const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+          const w = img.width * scale;
+          const h = img.height * scale;
+          const x = (canvas.width - w) / 2;
+          const y = (canvas.height - h) / 2;
+          
+          tempCtx.drawImage(img, x, y, w, h);
+          imageData = tempCtx.getImageData(0, 0, canvas.width, canvas.height);
+          
+          // Add default halftone layer if none exist
+          if (layers.length === 0) {
+            addLayer('halftone');
+          }
+          render();
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function addLayer(type) {
+      const layer = {
+        id: Date.now(),
+        type: type,
+        name: type === 'halftone' ? 'Halftone Layer' : 'Solid Layer',
+        visible: true,
+        settings: {
+          dotSize: 8,
+          spacing: 10,
+          angle: 45 + (layers.length * 15),
+          contrast: 1,
+          minDot: 0.5,
+          shape: 'circle',
+          invert: false,
+          offsetX: 0,
+          offsetY: 0,
+          scale: 100,
+          rotation: 0,
+          dotColor: type === 'solid' ? '#000000' : ['#000000', '#00ffff', '#ff00ff', '#ffff00'][layers.length % 4],
+          bgColor: '#ffffff',
+          opacity: 100,
+          blendMode: layers.length > 0 ? 'multiply' : 'normal'
+        }
+      };
+      
+      layers.push(layer);
+      activeLayerIndex = layers.length - 1;
+      updateLayersList();
+      loadLayerSettings(layer);
+      document.getElementById('layerSettings').style.display = 'block';
+      render();
+    }
+
+    function updateLayersList() {
+      const list = document.getElementById('layersList');
+      
+      if (layers.length === 0) {
+        list.innerHTML = `
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <line x1="3" y1="9" x2="21" y2="9"/>
+              <line x1="9" y1="21" x2="9" y2="9"/>
+            </svg>
+            <p>No layers yet<br><small>Add a layer to get started</small></p>
+          </div>
+        `;
+        return;
+      }
+
+      list.innerHTML = layers.map((layer, index) => `
+        <div class="layer-item ${index === activeLayerIndex ? 'active' : ''}" onclick="selectLayer(${index})">
+          <div class="layer-preview">
+            <div style="width:100%;height:100%;background:${layer.settings.dotColor};opacity:0.3;"></div>
+          </div>
+          <div class="layer-info">
+            <div class="layer-name">${layer.name}</div>
+            <div class="layer-type">${layer.type} • ${layer.settings.shape}</div>
+          </div>
+          <div class="layer-actions">
+            <button onclick="event.stopPropagation();moveLayer(${index},-1)" title="Move up">↑</button>
+            <button onclick="event.stopPropagation();moveLayer(${index},1)" title="Move down">↓</button>
+            <button onclick="event.stopPropagation();toggleLayerVisibility(${index})" title="Toggle visibility">
+              ${layer.visible ? '👁' : '○'}
+            </button>
+            <button onclick="event.stopPropagation();deleteLayer(${index})" title="Delete">×</button>
+          </div>
+        </div>
+      `).reverse().join('');
+    }
+
+    function selectLayer(index) {
+      activeLayerIndex = index;
+      loadLayerSettings(layers[index]);
+      updateLayersList();
+      document.getElementById('layerSettings').style.display = 'block';
+    }
+
+    function loadLayerSettings(layer) {
+      const s = layer.settings;
+      document.getElementById('dotSize').value = s.dotSize;
+      document.getElementById('spacing').value = s.spacing;
+      document.getElementById('angle').value = s.angle;
+      document.getElementById('contrast').value = s.contrast;
+      document.getElementById('minDot').value = s.minDot;
+      document.getElementById('offsetX').value = s.offsetX;
+      document.getElementById('offsetY').value = s.offsetY;
+      document.getElementById('scale').value = s.scale;
+      document.getElementById('rotation').value = s.rotation;
+      document.getElementById('dotColor').value = s.dotColor;
+      document.getElementById('bgColor').value = s.bgColor;
+      document.getElementById('opacity').value = s.opacity;
+      document.getElementById('blendMode').value = s.blendMode;
+      
+      document.getElementById('dotColorHex').textContent = s.dotColor;
+      document.getElementById('bgColorHex').textContent = s.bgColor;
+      
+      document.querySelectorAll('[data-shape]').forEach(c => {
+        c.classList.toggle('active', c.dataset.shape === s.shape);
+      });
+      
+      document.getElementById('invertToggle').classList.toggle('active', s.invert);
+      
+      ['dotSize', 'spacing', 'angle', 'contrast', 'minDot', 'offsetX', 'offsetY', 'scale', 'rotation', 'opacity'].forEach(updateSliderValue);
+    }
+
+    function updateActiveLayer() {
+      if (activeLayerIndex < 0) return;
+      
+      const s = layers[activeLayerIndex].settings;
+      s.dotSize = parseFloat(document.getElementById('dotSize').value);
+      s.spacing = parseFloat(document.getElementById('spacing').value);
+      s.angle = parseFloat(document.getElementById('angle').value);
+      s.contrast = parseFloat(document.getElementById('contrast').value);
+      s.minDot = parseFloat(document.getElementById('minDot').value);
+      s.offsetX = parseFloat(document.getElementById('offsetX').value);
+      s.offsetY = parseFloat(document.getElementById('offsetY').value);
+      s.scale = parseFloat(document.getElementById('scale').value);
+      s.rotation = parseFloat(document.getElementById('rotation').value);
+      s.dotColor = document.getElementById('dotColor').value;
+      s.bgColor = document.getElementById('bgColor').value;
+      s.opacity = parseFloat(document.getElementById('opacity').value);
+      s.blendMode = document.getElementById('blendMode').value;
+      s.shape = document.querySelector('[data-shape].active')?.dataset.shape || 'circle';
+      s.invert = document.getElementById('invertToggle').classList.contains('active');
+      
+      updateLayersList();
+    }
+
+    function moveLayer(index, direction) {
+      const newIndex = index + direction;
+      if (newIndex < 0 || newIndex >= layers.length) return;
+      
+      [layers[index], layers[newIndex]] = [layers[newIndex], layers[index]];
+      if (activeLayerIndex === index) activeLayerIndex = newIndex;
+      else if (activeLayerIndex === newIndex) activeLayerIndex = index;
+      
+      updateLayersList();
+      render();
+    }
+
+    function toggleLayerVisibility(index) {
+      layers[index].visible = !layers[index].visible;
+      updateLayersList();
+      render();
+    }
+
+    function deleteLayer(index) {
+      layers.splice(index, 1);
+      if (activeLayerIndex >= layers.length) activeLayerIndex = layers.length - 1;
+      if (layers.length === 0) {
+        activeLayerIndex = -1;
+        document.getElementById('layerSettings').style.display = 'none';
+      }
+      updateLayersList();
+      render();
+    }
+
+    function getBrightness(x, y) {
+      if (!imageData) return 0.5;
+      
+      const px = Math.floor(x);
+      const py = Math.floor(y);
+      if (px < 0 || px >= canvas.width || py < 0 || py >= canvas.height) return 0.5;
+      
+      const i = (py * canvas.width + px) * 4;
+      const r = imageData.data[i];
+      const g = imageData.data[i + 1];
+      const b = imageData.data[i + 2];
+      
+      return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      svgOutput.innerHTML = '';
+      
+      // Draw background
+      ctx.fillStyle = layers.length > 0 ? layers[0].settings.bgColor : '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Add background to SVG
+      const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      bgRect.setAttribute('width', '100%');
+      bgRect.setAttribute('height', '100%');
+      bgRect.setAttribute('fill', layers.length > 0 ? layers[0].settings.bgColor : '#ffffff');
+      svgOutput.appendChild(bgRect);
+
+      layers.forEach((layer, layerIndex) => {
+        if (!layer.visible) return;
+        
+        const s = layer.settings;
+        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        group.setAttribute('opacity', s.opacity / 100);
+        group.style.mixBlendMode = s.blendMode;
+        
+        ctx.save();
+        ctx.globalAlpha = s.opacity / 100;
+        ctx.globalCompositeOperation = s.blendMode === 'normal' ? 'source-over' : s.blendMode;
+
+        if (layer.type === 'solid') {
+          ctx.fillStyle = s.dotColor;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          
+          const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          rect.setAttribute('width', '100%');
+          rect.setAttribute('height', '100%');
+          rect.setAttribute('fill', s.dotColor);
+          group.appendChild(rect);
+        } else {
+          renderHalftoneLayer(layer, group);
+        }
+        
+        ctx.restore();
+        svgOutput.appendChild(group);
+      });
+    }
+
+    function renderHalftoneLayer(layer, svgGroup) {
+      const s = layer.settings;
+      const angleRad = (s.angle * Math.PI) / 180;
+      const rotationRad = (s.rotation * Math.PI) / 180;
+      const scaleFactor = s.scale / 100;
+      
+      const spacing = s.spacing;
+      const maxRadius = s.dotSize / 2;
+      
+      // Calculate grid
+      const diagonal = Math.sqrt(canvas.width * canvas.width + canvas.height * canvas.height);
+      const cols = Math.ceil(diagonal / spacing) + 4;
+      const rows = Math.ceil(diagonal / spacing) + 4;
+      
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+
+      for (let row = -rows; row <= rows; row++) {
+        for (let col = -cols; col <= cols; col++) {
+          // Grid position
+          let gx = col * spacing;
+          let gy = row * spacing;
+          
+          // Apply angle rotation
+          const rx = gx * Math.cos(angleRad) - gy * Math.sin(angleRad);
+          const ry = gx * Math.sin(angleRad) + gy * Math.cos(angleRad);
+          
+          // Apply offset and center
+          let x = rx + centerX + s.offsetX;
+          let y = ry + centerY + s.offsetY;
+          
+          // Apply scale from center
+          x = centerX + (x - centerX) * scaleFactor;
+          y = centerY + (y - centerY) * scaleFactor;
+          
+          // Apply rotation transform
+          const dx = x - centerX;
+          const dy = y - centerY;
+          x = centerX + dx * Math.cos(rotationRad) - dy * Math.sin(rotationRad);
+          y = centerY + dx * Math.sin(rotationRad) + dy * Math.cos(rotationRad);
+          
+          // Check bounds
+          if (x < -maxRadius || x > canvas.width + maxRadius || 
+              y < -maxRadius || y > canvas.height + maxRadius) continue;
+          
+          // Get brightness
+          let brightness = getBrightness(x, y);
+          brightness = Math.pow(brightness, 1 / s.contrast);
+          
+          if (s.invert) brightness = 1 - brightness;
+          
+          // Calculate dot size based on darkness
+          const darkness = 1 - brightness;
+          const radius = Math.max(maxRadius * s.minDot, maxRadius * darkness);
+          
+          if (radius < 0.5) continue;
+          
+          // Draw on canvas
+          ctx.fillStyle = s.dotColor;
+          drawShape(ctx, x, y, radius, s.shape);
+          
+          // Add to SVG
+          const shape = createSVGShape(x, y, radius, s.shape, s.dotColor);
+          if (shape) svgGroup.appendChild(shape);
+        }
+      }
+    }
+
+    function drawShape(ctx, x, y, radius, shape) {
+      ctx.beginPath();
+      switch (shape) {
+        case 'circle':
+          ctx.arc(x, y, radius, 0, Math.PI * 2);
+          break;
+        case 'square':
+          ctx.rect(x - radius, y - radius, radius * 2, radius * 2);
+          break;
+        case 'diamond':
+          ctx.moveTo(x, y - radius);
+          ctx.lineTo(x + radius, y);
+          ctx.lineTo(x, y + radius);
+          ctx.lineTo(x - radius, y);
+          ctx.closePath();
+          break;
+        case 'line':
+          ctx.rect(x - radius, y - radius * 0.3, radius * 2, radius * 0.6);
+          break;
+        case 'cross':
+          ctx.rect(x - radius * 0.3, y - radius, radius * 0.6, radius * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.rect(x - radius, y - radius * 0.3, radius * 2, radius * 0.6);
+          break;
+      }
+      ctx.fill();
+    }
+
+    function createSVGShape(x, y, radius, shape, color) {
+      let el;
+      switch (shape) {
+        case 'circle':
+          el = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          el.setAttribute('cx', x);
+          el.setAttribute('cy', y);
+          el.setAttribute('r', radius);
+          break;
+        case 'square':
+          el = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          el.setAttribute('x', x - radius);
+          el.setAttribute('y', y - radius);
+          el.setAttribute('width', radius * 2);
+          el.setAttribute('height', radius * 2);
+          break;
+        case 'diamond':
+          el = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+          el.setAttribute('points', `${x},${y-radius} ${x+radius},${y} ${x},${y+radius} ${x-radius},${y}`);
+          break;
+        case 'line':
+          el = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          el.setAttribute('x', x - radius);
+          el.setAttribute('y', y - radius * 0.3);
+          el.setAttribute('width', radius * 2);
+          el.setAttribute('height', radius * 0.6);
+          break;
+        case 'cross':
+          el = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          const v = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          v.setAttribute('x', x - radius * 0.3);
+          v.setAttribute('y', y - radius);
+          v.setAttribute('width', radius * 0.6);
+          v.setAttribute('height', radius * 2);
+          v.setAttribute('fill', color);
+          const h = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          h.setAttribute('x', x - radius);
+          h.setAttribute('y', y - radius * 0.3);
+          h.setAttribute('width', radius * 2);
+          h.setAttribute('height', radius * 0.6);
+          h.setAttribute('fill', color);
+          el.appendChild(v);
+          el.appendChild(h);
+          return el;
+      }
+      el.setAttribute('fill', color);
+      return el;
+    }
+
+    function applyPreset(preset) {
+      if (activeLayerIndex < 0) return;
+      
+      const s = layers[activeLayerIndex].settings;
+      
+      switch (preset) {
+        case 'classic':
+          s.dotSize = 8; s.spacing = 10; s.angle = 45;
+          s.shape = 'circle'; s.dotColor = '#000000';
+          break;
+        case 'pop':
+          s.dotSize = 12; s.spacing = 14; s.angle = 30;
+          s.shape = 'circle'; s.dotColor = '#ff0066';
+          break;
+        case 'cmyk-c':
+          s.dotSize = 8; s.spacing = 10; s.angle = 15;
+          s.shape = 'circle'; s.dotColor = '#00ffff';
+          break;
+        case 'dense':
+          s.dotSize = 4; s.spacing = 5; s.angle = 45;
+          s.shape = 'circle'; s.dotColor = '#000000';
+          break;
+        case 'squares':
+          s.dotSize = 10; s.spacing = 12; s.angle = 0;
+          s.shape = 'square'; s.dotColor = '#000000';
+          break;
+        case 'lines':
+          s.dotSize = 8; s.spacing = 6; s.angle = 0;
+          s.shape = 'line'; s.dotColor = '#000000';
+          break;
+      }
+      
+      loadLayerSettings(layers[activeLayerIndex]);
+      render();
+    }
+
+    function exportSVG() {
+      const svgData = new XMLSerializer().serializeToString(svgOutput);
+      const blob = new Blob([svgData], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'halftone.svg';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportPNG() {
+      const a = document.createElement('a');
+      a.href = canvas.toDataURL('image/png');
+      a.download = 'halftone.png';
+      a.click();
+    }
+
+    init();
+  </script>
+</body>
+</html>
